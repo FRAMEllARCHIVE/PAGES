@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Pages</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1e1e2e;
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 20px auto;
+            width: 90%;
+            max-width: 600px;
+            text-align: left;
+        }
+        li {
+            margin: 10px 0;
+        }
+        a {
+            color: #79c0ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .github-logo {
+            width: 100px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .input-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #292a36;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        .input-popup input {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 5px;
+        }
+        .input-popup button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            background: #79c0ff;
+            color: #1e1e2e;
+            cursor: pointer;
+        }
+        .input-popup button:hover {
+            background: #66a7e5;
+        }
+    </style>
+</head>
+<body>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="#ffffff" class="github-logo" id="github-logo" title="Click to change GitHub username">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38A8.003 8.003 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    <ul id="repo-list">
+        <li>Loading...</li>
+    </ul>
+
+    <div class="input-popup" id="username-popup">
+        <h2 style="color: #ffffff;">Change GitHub Username</h2>
+        <input type="text" id="username-input" placeholder="Enter GitHub username">
+        <button id="save-username">Save</button>
+    </div>
+
+    <script>
+        const logo = document.getElementById('github-logo');
+        const usernamePopup = document.getElementById('username-popup');
+        const usernameInput = document.getElementById('username-input');
+        const saveUsernameButton = document.getElementById('save-username');
+        const repoList = document.getElementById('repo-list');
+
+        let username = localStorage.getItem('githubUsername') || 'FRAMEllARCHIVE';
+
+        const apiURL = (username) => `https://api.github.com/users/${username}/repos`;
+
+        logo.addEventListener('click', () => {
+            usernamePopup.style.display = 'block';
+            usernameInput.value = username;
+        });
+
+        saveUsernameButton.addEventListener('click', () => {
+            username = usernameInput.value.trim();
+            if (username) {
+                localStorage.setItem('githubUsername', username);
+                usernamePopup.style.display = 'none';
+                populateRepoList();
+            }
+        });
+
+async function fetchRepos(page = 1, repos = []) {
+    try {
+        const response = await fetch(`${apiURL(username)}?per_page=100&page=${page}`);
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+        const newRepos = await response.json();
+        repos = repos.concat(newRepos);
+        if (newRepos.length === 100) {
+            return fetchRepos(page + 1, repos);
+        }
+        return repos;
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+}
+
+
+        function getPagesURL(repoName) {
+            return `https://${username}.github.io/${repoName}`;
+        }
+
+        async function populateRepoList() {
+            repoList.innerHTML = "<li>Loading...</li>";
+            const repos = await fetchRepos();
+            repoList.innerHTML = "";
+            repos.forEach(repo => {
+                const listItem = document.createElement("li");
+                const link = document.createElement("a");
+                link.href = getPagesURL(repo.name);
+                link.textContent = repo.name;
+                link.target = "_blank";
+                listItem.appendChild(link);
+                repoList.appendChild(listItem);
+            });
+            if (repos.length === 0) {
+                repoList.innerHTML = "<li>No public repositories found.</li>";
+            }
+        }
+
+        window.addEventListener('click', (event) => {
+            if (event.target === usernamePopup) {
+                usernamePopup.style.display = 'none';
+            }
+        });
+
+        populateRepoList();
+    </script>
+</body>
+</html>
